@@ -1,103 +1,85 @@
 package com.zq.topnews.ui
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import com.zq.topnews.R
-import com.zq.topnews.data.NewsItem
 import com.zq.topnews.data.sampleNews
+import com.zq.topnews.ui.home.ArticleDetailScreen
+import com.zq.topnews.ui.home.HomeFeedScreen
+import com.zq.topnews.ui.message.MessageScreen
+import com.zq.topnews.ui.profile.ProfileScreen
 import com.zq.topnews.ui.theme.TopNewsTheme
+import com.zq.topnews.ui.video.VideoScreen
 
-/** Single-screen TopNews experience: a top bar and a hard-coded headline feed. */
-@OptIn(ExperimentalMaterial3Api::class)
+private enum class MainTab(val label: String, val icon: ImageVector) {
+    HOME("首页", Icons.Filled.Home),
+    VIDEO("视频", Icons.Filled.PlayArrow),
+    MESSAGE("消息", Icons.Filled.Notifications),
+    PROFILE("我的", Icons.Filled.Person),
+}
+
+/**
+ * TopNews root: a four-tab shell with a full-screen article view on top.
+ * Navigation is local state; the demo has no routes that need restoring.
+ */
 @Composable
 fun TopNewsApp() {
+    var currentTab by rememberSaveable { mutableStateOf(MainTab.HOME.name) }
+    var openArticleId by rememberSaveable { mutableStateOf<String?>(null) }
+    val article = openArticleId?.let { id -> sampleNews.firstOrNull { it.id == id } }
+
+    BackHandler(enabled = article != null) {
+        openArticleId = null
+    }
+
+    if (article != null) {
+        ArticleDetailScreen(item = article, onBack = { openArticleId = null })
+        return
+    }
+
+    val tab = MainTab.valueOf(currentTab)
+
     Scaffold(
-        topBar = {
-            Column {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = stringResource(R.string.app_name),
-                            fontWeight = FontWeight.Bold,
-                        )
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.primary,
-                    ),
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        bottomBar = {
+            NavigationBar {
+                MainTab.entries.forEach { entry ->
+                    NavigationBarItem(
+                        selected = entry == tab,
+                        onClick = { currentTab = entry.name },
+                        icon = { Icon(entry.icon, contentDescription = entry.label) },
+                        label = { Text(entry.label) },
+                    )
+                }
             }
         },
     ) { innerPadding ->
-        NewsList(
-            news = sampleNews,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-        )
-    }
-}
-
-@Composable
-private fun NewsList(
-    news: List<NewsItem>,
-    modifier: Modifier = Modifier,
-) {
-    LazyColumn(
-        modifier = modifier,
-        contentPadding = PaddingValues(bottom = 8.dp),
-    ) {
-        itemsIndexed(news, key = { _, item -> item.title }) { index, item ->
-            NewsRow(item)
-            if (index < news.lastIndex) {
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                )
-            }
+        val contentModifier = Modifier.padding(innerPadding)
+        when (tab) {
+            MainTab.HOME -> HomeFeedScreen(
+                onOpenArticle = { openArticleId = it.id },
+                modifier = contentModifier,
+            )
+            MainTab.VIDEO -> VideoScreen(modifier = contentModifier)
+            MainTab.MESSAGE -> MessageScreen(modifier = contentModifier)
+            MainTab.PROFILE -> ProfileScreen(modifier = contentModifier)
         }
-    }
-}
-
-@Composable
-private fun NewsRow(item: NewsItem) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-    ) {
-        Text(
-            text = item.title,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = "${item.source} · ${item.time}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 
