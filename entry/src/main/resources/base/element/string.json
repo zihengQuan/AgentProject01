@@ -1,0 +1,20 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "TopNews entry module"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "TopNews home page"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "TopNews"
+    },
+    {
+      "name": "app_name",
+      "value": "TopNews"
+    }
+  ]
+}
