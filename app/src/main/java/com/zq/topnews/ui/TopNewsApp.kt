@@ -28,6 +28,7 @@ import com.zq.topnews.data.InMemoryAuthStore
 import com.zq.topnews.data.MockAuthRepository
 import com.zq.topnews.data.NewsRepository
 import com.zq.topnews.ui.auth.AuthScreen
+import com.zq.topnews.ui.game.RacingGameScreen
 import com.zq.topnews.ui.home.ArticleDetailScreen
 import com.zq.topnews.ui.home.HomeFeedScreen
 import com.zq.topnews.ui.message.MessageScreen
@@ -51,6 +52,7 @@ fun TopNewsApp(authRepository: AuthRepository) {
     var currentTab by rememberSaveable { mutableStateOf(MainTab.HOME.name) }
     var openArticleId by rememberSaveable { mutableStateOf<String?>(null) }
     var authVisible by rememberSaveable { mutableStateOf(false) }
+    var gameVisible by rememberSaveable { mutableStateOf(false) }
     val article = openArticleId?.let { NewsRepository.find(it) }
     val currentUser by authRepository.currentUser.collectAsState()
 
@@ -78,6 +80,11 @@ fun TopNewsApp(authRepository: AuthRepository) {
 
     if (article != null) {
         ArticleDetailScreen(item = article, onBack = { openArticleId = null })
+        return
+    }
+
+    if (gameVisible) {
+        RacingGameScreen(onExit = { gameVisible = false })
         return
     }
 
@@ -109,6 +116,7 @@ fun TopNewsApp(authRepository: AuthRepository) {
                 user = currentUser,
                 onLoginClick = { authVisible = true },
                 onLogout = { authRepository.logout() },
+                onPlayGame = { gameVisible = true },
                 modifier = contentModifier,
             )
         }
