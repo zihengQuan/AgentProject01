@@ -1,6 +1,6 @@
 # TopNews
 
-一个参考「今日头条」信息流布局的 Android 新闻资讯示例 App，使用 Kotlin + Jetpack Compose 实现。
+一个参考「今日头条」信息流布局的 Android 新闻资讯示例应用，使用 Kotlin + Jetpack Compose 实现。
 
 - **包名**：`com.zq.topnews`
 - **最低版本**：Android 7.0（API 24），编译/目标版本 API 35
