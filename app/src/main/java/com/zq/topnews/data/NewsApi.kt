@@ -124,6 +124,12 @@ object NewsRepository {
                     summary = entry.optText("digest"),
                     paragraphs = emptyList(),
                     tone = Math.floorMod(id.hashCode(), 8),
+                    url = shareUrl(
+                        id = id,
+                        url = entry.optText("url"),
+                        skipType = entry.optText("skipType"),
+                        skipUrl = entry.optText("skipURL"),
+                    ),
                 ),
             )
         }
@@ -133,6 +139,23 @@ object NewsRepository {
     /** Reads a JSON string, treating a literal JSON `null` as empty like an absent field. */
     private fun JSONObject.optText(name: String): String =
         optString(name).trim().takeIf { it != "null" }.orEmpty()
+
+    /**
+     * Resolves the public page to open when an article is shared. Many entries
+     * report a web link; videos, photo sets and live rooms instead carry a
+     * `skipURL`, and plain articles with neither fall back to NetEase's mobile
+     * article page, which redirects to the canonical one.
+     */
+    private fun shareUrl(id: String, url: String, skipType: String, skipUrl: String): String {
+        if (url.isHttpUrl()) return url
+        if (skipUrl.isHttpUrl()) {
+            return if (skipType == "video") "https://m.163.com/v/video/$id.html" else skipUrl
+        }
+        return "https://m.163.com/dy/article/$id.html"
+    }
+
+    private fun String.isHttpUrl(): Boolean =
+        startsWith("http://") || startsWith("https://")
 
     internal fun parseArticle(body: String): List<String> {
         val json = parseJsonp(body, "artiContent")

@@ -18,6 +18,8 @@ data class NewsItem(
     val summary: String,
     val paragraphs: List<String>,
     val tone: Int,
+    /** Public web page for the article, used as the link when sharing it. */
+    val url: String,
 )
 
 /** Channel tabs across the top of the home feed. */
