@@ -50,15 +50,54 @@ class SampleDataTest {
     }
 
     @Test
-    fun videoIdsAreUniqueAndFieldsFilled() {
-        val ids = sampleVideos.map { it.id }
-        assertEquals(ids.size, ids.distinct().size)
-        sampleVideos.forEach { video ->
-            assertTrue("${video.id} has a blank title", video.title.isNotBlank())
-            assertTrue("${video.id} has a blank author", video.author.isNotBlank())
-            assertTrue("${video.id} has a blank duration", video.duration.isNotBlank())
-            assertTrue("${video.id} tone out of range: ${video.tone}", video.tone in 0..7)
-        }
+    fun parsesBilibiliPopularResponse() {
+        val videos = VideoRepository.parse(BILIBILI_FIXTURE)
+
+        assertEquals(2, videos.size)
+        val first = videos.first()
+        assertEquals("BV1xx411c7mD", first.bvid)
+        assertEquals("测试视频标题", first.title)
+        assertEquals("测试UP主", first.author)
+        assertEquals(1_234_567L, first.views)
+        assertEquals(159, first.durationSeconds)
+        assertEquals(
+            "https://i0.hdslb.com/bfs/archive/cover.jpg",
+            first.coverUrl,
+        )
+        assertEquals(
+            "https://www.bilibili.com/video/BV1xx411c7mD",
+            first.pageUrl,
+        )
+    }
+
+    @Test
+    fun parseFallsBackForMissingOwnerName() {
+        val video = VideoRepository.parse(
+            """{"code":0,"data":{"list":[{"bvid":"BV1","title":"t","pic":"http://x/y.jpg","duration":5}]}}""",
+        ).single()
+
+        assertEquals("哔哩哔哩用户", video.author)
+        assertEquals(0L, video.views)
+    }
+
+    @Test(expected = java.io.IOException::class)
+    fun parseRejectsNonZeroCode() {
+        VideoRepository.parse("""{"code":-412,"message":"请求被拦截"}""")
+    }
+
+    private companion object {
+        const val BILIBILI_FIXTURE = """
+            {"code":0,"data":{"list":[
+              {"bvid":"BV1xx411c7mD","title":"测试视频标题",
+               "pic":"http://i0.hdslb.com/bfs/archive/cover.jpg","duration":159,
+               "owner":{"mid":1,"name":"测试UP主"},
+               "stat":{"view":1234567,"danmaku":100}},
+              {"bvid":"BV1yy411c7mE","title":"第二个视频",
+               "pic":"http://i1.hdslb.com/bfs/archive/cover2.jpg","duration":3725,
+               "owner":{"mid":2,"name":"另一个UP主"},
+               "stat":{"view":88}}
+            ]}}
+        """
     }
 
     @Test
