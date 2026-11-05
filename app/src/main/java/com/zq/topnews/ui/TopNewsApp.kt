@@ -13,6 +13,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -20,7 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
-import com.zq.topnews.data.sampleNews
+import com.zq.topnews.data.NewsRepository
 import com.zq.topnews.ui.home.ArticleDetailScreen
 import com.zq.topnews.ui.home.HomeFeedScreen
 import com.zq.topnews.ui.message.MessageScreen
@@ -37,13 +38,18 @@ private enum class MainTab(val label: String, val icon: ImageVector) {
 
 /**
  * TopNews root: a four-tab shell with a full-screen article view on top.
- * Navigation is local state; the demo has no routes that need restoring.
+ * Navigation is local state; the open article is resolved from the loaded feed.
  */
 @Composable
 fun TopNewsApp() {
     var currentTab by rememberSaveable { mutableStateOf(MainTab.HOME.name) }
     var openArticleId by rememberSaveable { mutableStateOf<String?>(null) }
-    val article = openArticleId?.let { id -> sampleNews.firstOrNull { it.id == id } }
+    val article = openArticleId?.let { NewsRepository.find(it) }
+
+    // The feed cache is in memory only; after process death the id is stale.
+    LaunchedEffect(openArticleId, article) {
+        if (openArticleId != null && article == null) openArticleId = null
+    }
 
     BackHandler(enabled = article != null) {
         openArticleId = null
