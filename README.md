@@ -10,8 +10,8 @@
 
 | 模块 | 内容 |
 | --- | --- |
-| 首页 | 红色品牌搜索栏、推荐/热点/科技/体育/财经/娱乐频道切换、头条大图卡片 + 图文列表、评论数与发布时间 |
-| 文章详情 | 沉浸式阅读页、分享/收藏操作、正文分段排版、底部评论输入栏 |
+| 首页 | 红色品牌搜索栏、推荐/热点/科技/体育/财经/娱乐频道切换、头条大图卡片 + 图文列表、评论数与发布时间；实时拉取**网易新闻公开接口**（无需密钥/登录） |
+| 文章详情 | 沉浸式阅读页、分享/收藏操作、正文分段排版、底部评论输入栏；正文按需从公开接口加载 |
 | 视频 | 实时拉取**哔哩哔哩公开热门接口**（无需密钥/登录），双列宫格展示封面、时长、UP 主与播放量；支持刷新按钮、失败重试，点击卡片跳转 B 站 |
 | 消息 | 点赞 / 评论 / 粉丝 / @我 / 系统通知 / 私信 六类消息入口 |
 | 我的 | 头像与登录入口、动态/关注/粉丝统计、收藏/历史/商城/钱包快捷入口、设置与帮助菜单 |
@@ -37,15 +37,16 @@ export JAVA_HOME=/path/to/jdk-17
 export ANDROID_HOME=/path/to/android-sdk
 
 ./gradlew assembleDebug          # 产物：app/build/outputs/apk/debug/app-debug.apk
-./gradlew testDebugUnitTest      # 数据样例单元测试
+./gradlew testDebugUnitTest      # 接口解析单元测试
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb shell am start -n com.zq.topnews/.MainActivity
 ```
 
 ## 数据来源
 
+- **新闻频道**：网易新闻公开接口，无需密钥或登录。列表为 `https://3g.163.com/touch/reconstruct/article/list/<channel>/0-20.html`（JSONP），正文为 `https://3g.163.com/touch/article/<docid>/full.html`。频道对应关系：推荐→头条、热点→国内、科技→数码、体育→体育、财经→财经、娱乐→娱乐；结果在内存中缓存，切换标签页不会重复请求，标题栏右上角可手动刷新。
 - **视频频道**：`https://api.bilibili.com/x/web-interface/popular`，B 站公开接口，无需 App Key 或登录；封面通过 Coil 加载，请求会携带 B 站要求的 Referer。接口结果在内存中缓存，切换标签页不会重复请求。
-- **新闻 / 消息 / 个人中心**：内置示例数据（`data/` 包），图片用渐变占位（`ui/components/Placeholder.kt`）。
-- 视频页需要网络；加载失败会展示错误页和「重试」按钮。其余页面离线可浏览。
+- **消息 / 个人中心**：内置示例数据（`data/` 包），图片用渐变占位（`ui/components/Placeholder.kt`）。
+- 新闻与视频页需要网络；加载失败会展示错误页和「重试」按钮，文章正文加载失败时也可单独重试。消息与个人中心离线可浏览。
 
 > 本项目仅用于学习 Compose 与公开接口调用，视频内容版权归哔哩哔哩及原作者所有。

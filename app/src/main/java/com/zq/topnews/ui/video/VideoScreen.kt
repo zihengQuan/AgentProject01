@@ -26,7 +26,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -54,9 +53,9 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.zq.topnews.data.FeedVideo
 import com.zq.topnews.data.VideoRepository
+import com.zq.topnews.ui.components.NetworkErrorState
 import com.zq.topnews.ui.components.ToneBox
-import java.net.SocketTimeoutException
-import java.net.UnknownHostException
+import com.zq.topnews.ui.components.toUserMessage
 import java.util.Locale
 
 /** Two-column video channel backed by Bilibili's public popular feed. */
@@ -94,7 +93,11 @@ fun VideoScreen(modifier: Modifier = Modifier) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
 
-            is VideoUiState.Failed -> ErrorState(message = current.message, onRetry = { refreshKey++ })
+            is VideoUiState.Failed -> NetworkErrorState(
+                title = "视频加载失败",
+                message = current.message,
+                onRetry = { refreshKey++ },
+            )
 
             is VideoUiState.Ready -> {
                 if (current.videos.isEmpty()) {
@@ -242,40 +245,6 @@ private fun VideoCard(video: FeedVideo) {
             overflow = TextOverflow.Ellipsis,
         )
     }
-}
-
-@Composable
-private fun ErrorState(message: String, onRetry: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            text = "视频加载失败",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-        )
-        Spacer(Modifier.height(16.dp))
-        Button(onClick = onRetry) {
-            Text("重试")
-        }
-    }
-}
-
-private fun Exception.toUserMessage(): String = when (this) {
-    is UnknownHostException -> "网络不可用，请检查网络连接"
-    is SocketTimeoutException -> "请求超时，请稍后重试"
-    else -> message ?: "加载失败，请稍后重试"
 }
 
 internal fun formatViews(views: Long): String = when {

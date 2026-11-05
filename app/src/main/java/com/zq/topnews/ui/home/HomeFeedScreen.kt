@@ -22,14 +22,19 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -41,45 +46,106 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zq.topnews.data.NewsItem
+import com.zq.topnews.data.NewsRepository
 import com.zq.topnews.data.categories
-import com.zq.topnews.data.sampleNews
+import com.zq.topnews.ui.components.NetworkErrorState
 import com.zq.topnews.ui.components.ToneBox
 import com.zq.topnews.ui.components.toneBrush
+import com.zq.topnews.ui.components.toUserMessage
 
-/** Toutiao-style home channel: brand + search, category tabs and a headline feed. */
+/** Toutiao-style home channel: brand + search, category tabs and a live headline feed. */
 @Composable
 fun HomeFeedScreen(
     onOpenArticle: (NewsItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var selected by rememberSaveable { mutableStateOf(categories.first()) }
-    val feed = remember(selected) {
-        if (selected == categories.first()) sampleNews else sampleNews.filter { it.category == selected }
+    var refreshKey by rememberSaveable { mutableIntStateOf(0) }
+    var state by remember { mutableStateOf<FeedUiState>(FeedUiState.Loading) }
+
+    LaunchedEffect(selected, refreshKey) {
+        val cached = NewsRepository.cached(selected)
+        if (refreshKey == 0 && cached != null) {
+            state = FeedUiState.Ready(cached)
+            return@LaunchedEffect
+        }
+        state = FeedUiState.Loading
+        state = try {
+            FeedUiState.Ready(NewsRepository.feed(selected, forceRefresh = refreshKey > 0))
+        } catch (error: Exception) {
+            FeedUiState.Failed(error.toUserMessage())
+        }
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-        SearchHeader()
-        CategoryTabs(selected = selected, onSelect = { selected = it })
+        SearchHeader(
+            refreshing = state is FeedUiState.Loading,
+            onRefresh = { refreshKey++ },
+        )
+        CategoryTabs(
+            selected = selected,
+            onSelect = {
+                selected = it
+                refreshKey = 0
+            },
+        )
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-        LazyColumn(contentPadding = PaddingValues(bottom = 12.dp)) {
-            itemsIndexed(feed, key = { _, item -> item.id }) { index, item ->
-                if (index == 0) {
-                    TopStory(item, onClick = { onOpenArticle(item) })
+        when (val current = state) {
+            FeedUiState.Loading -> Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            }
+
+            is FeedUiState.Failed -> NetworkErrorState(
+                title = "新闻加载失败",
+                message = current.message,
+                onRetry = { refreshKey++ },
+            )
+
+            is FeedUiState.Ready -> {
+                if (current.items.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "暂无新闻",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 } else {
-                    FeedRow(item, onClick = { onOpenArticle(item) })
+                    NewsFeed(items = current.items, onOpenArticle = onOpenArticle)
                 }
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                )
             }
         }
     }
 }
 
+private sealed interface FeedUiState {
+    data object Loading : FeedUiState
+    data class Ready(val items: List<NewsItem>) : FeedUiState
+    data class Failed(val message: String) : FeedUiState
+}
+
 @Composable
-private fun SearchHeader() {
+private fun NewsFeed(items: List<NewsItem>, onOpenArticle: (NewsItem) -> Unit) {
+    LazyColumn(contentPadding = PaddingValues(bottom = 12.dp)) {
+        itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
+            if (index == 0) {
+                TopStory(item, onClick = { onOpenArticle(item) })
+            } else {
+                FeedRow(item, onClick = { onOpenArticle(item) })
+            }
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                color = MaterialTheme.colorScheme.outlineVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SearchHeader(refreshing: Boolean, onRefresh: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -120,7 +186,15 @@ private fun SearchHeader() {
                 )
             }
         }
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(4.dp))
+        IconButton(onClick = onRefresh, enabled = !refreshing) {
+            Icon(
+                imageVector = Icons.Filled.Refresh,
+                contentDescription = "刷新",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Spacer(Modifier.width(6.dp))
         Box(
             modifier = Modifier
                 .size(34.dp)
