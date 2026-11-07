@@ -44,6 +44,10 @@
 | --- | --- |
 | ![暂停](docs/screenshots/racing/after-paused.png) | ![撞车结束](docs/screenshots/racing/after-game-over.png) |
 
+## 教程
+
+- [Kotlin / Android 中的 reduce 详细教程](docs/kotlin-reduce-tutorial.md)：从函数签名、`reduce` 与 `fold` 的区别，到 Android 购物车、分页合并、Compose Modifier、Flow 聚合与常见坑，附可运行的单元测试。
+
 ## 构建
 
 需要 JDK 17 和 Android SDK（platform 35、build-tools 35.0.0）。
